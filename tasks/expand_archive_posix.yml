@@ -1,0 +1,160 @@
+---
+- name: "{{ archive.filename }}: Check if destination directory is present"  # noqa: name[template]
+  ansible.builtin.stat:
+    path: "{{ archive.base_destination_directory }}"
+  register: destination_directory
+
+- name: "{{ archive.filename }}: Check if destination directory is empty"  # noqa: name[template]
+  ansible.builtin.find:
+    paths: "{{ archive.base_destination_directory }}"
+    file_type: any
+  register: destination_directory_files
+  when: destination_directory.stat.exists
+
+- name: "{{ archive.filename }}: Ensure destination directory is present"  # noqa: name[template]
+  ansible.builtin.file:
+    path: "{{ platform_specific_default_base_proget_archive_directory }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "0755"
+  become: true
+
+- name: Create Required directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    recurse: true
+    mode: "0755"
+  become: true
+  loop:
+    - "{{ archive.base_destination_directory }}/{{ archive.move_and_delete_base_directory }}"
+    - "{{ proget_status_directory }}"
+
+- name: "{{ archive.filename }}: Check sha256 file is present"  # noqa: name[template]
+  ansible.builtin.stat:
+    path: "{{ proget_status_directory }}/{{ archive.filename }}.sha256"
+  register: downloaded_sha256_file
+
+- name: "{{ archive.filename }}: Read sha256 from downloaded_sha256_file file if present"  # noqa: name[template]
+  ansible.builtin.slurp:
+    src: "{{ proget_status_directory }}/{{ archive.filename }}.sha256"
+  register: downloaded_sha256_file_sha256
+  when: downloaded_sha256_file.stat.exists
+
+- name: "{{ archive.filename }}: GET on the remote file to read sha256"  # noqa: name[template]
+  ansible.builtin.uri:
+    url: "{{ proget_api_url }}/{{ archive.repo_name }}/metadata/{{ archive.repo_path }}/{{ archive.filename }}"
+    method: GET
+    timeout: 60
+    headers:
+      X-ApiKey: "{{ ansible_deployment_proget_key }}"
+  register: remote_archive_head
+
+- name: "{{ archive.filename }}: Check downloaded file is present"  # noqa: name[template]
+  ansible.builtin.stat:
+    path: "{{ proget_status_directory }}/{{ archive.filename }}"
+  register: downloaded_file
+
+- name: "{{ archive.filename }}: Delete the downloaded archive if the size is different"  # noqa: name[template]
+  ansible.builtin.file:
+    path: "{{ proget_downloads_directory }}/{{ archive.filename }}"
+    state: absent
+  when: downloaded_file.stat.exists and remote_archive_head.json.size != downloaded_file.stat.size
+
+- name: "{{ archive.filename }}: Download file if sha256 changed or destination directory is new"  # noqa: no-changed-when name[template]
+  ansible.builtin.command: pgutil assets download --feed={{ archive.repo_name }} --path={{ archive.repo_path }}/{{ archive.filename }} --output={{ proget_downloads_directory }}/{{ archive.filename }}
+  environment:
+    PATH: "/opt/homebrew/bin:{{ ansible_env.PATH }}"
+  when: >
+    not downloaded_sha256_file.stat.exists
+    or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode
+    or not destination_directory.stat.exists
+    or destination_directory_files.matched == 0
+  register: download
+
+- name: "{{ archive.filename }}: Determine archive type (part 1)"  # noqa: name[template]
+  ansible.builtin.set_fact:
+    is_tar: "{{ archive.filename.endswith('.tar.gz') or archive.filename.endswith('.tar.xz') or archive.filename.endswith('.tar.zst') or archive.filename.endswith('.tar.bz2') }}"
+
+- name: "{{ archive.filename }}: Extract 7z / zip archive if sha256 changed"  # noqa: no-changed-when name[template]
+  ansible.builtin.command: >
+    7z x -aoa
+      "{{ proget_downloads_directory }}/{{ archive.filename }}"
+      -o"{{ archive.base_destination_directory }}"
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+  when: >
+    (not is_tar)
+    and (not downloaded_sha256_file.stat.exists
+         or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode
+         or not destination_directory.stat.exists or destination_directory_files.matched == 0)
+  retries: 3
+  delay: 5
+  register: extract_command_status
+  until: extract_command_status.rc == 0
+
+- name: "{{ archive.filename }}: Extract tar archive if sha256 changed" # noqa: no-changed-when name[template] command-instead-of-module
+  ansible.builtin.unarchive:
+    src: "{{ proget_downloads_directory }}/{{ archive.filename }}"
+    dest: "{{ archive.base_destination_directory }}"
+    remote_src: yes
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+  when: >
+    is_tar
+    and (not downloaded_sha256_file.stat.exists
+         or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode
+         or not destination_directory.stat.exists or destination_directory_files.matched == 0)
+  register: extract_command_status
+
+- name: "{{ archive.filename }}: Move out of base directory source"  # noqa: name[template]
+  ansible.builtin.copy:
+    src: "{{ archive.base_destination_directory }}/{{ archive.move_and_delete_base_directory }}/"
+    dest: "{{ archive.base_destination_directory }}/"
+    remote_src: true
+    mode: preserve
+  when: archive.move_and_delete_base_directory is defined
+
+- name: "{{ archive.filename }}: Remove base directory"  # noqa: name[template]
+  ansible.builtin.file:
+    path: "{{ archive.base_destination_directory }}/{{ archive.move_and_delete_base_directory }}"
+    state: absent
+
+- name: "{{ archive.filename }}: Set owner for extracted files"  # noqa: name[template]
+  when: not is_tar or archive.contents_owner is defined
+  ansible.builtin.file:
+    owner: "{{ archive.contents_owner | default(ansible_user) }}"
+    dest: "{{ archive.base_destination_directory }}"
+    recurse: true
+  become: true
+
+- name: "{{ archive.filename }}: Ensure correct owner on destination directory"  # noqa: name[template]
+  ansible.builtin.file:
+    owner: "{{ archive.contents_owner | default(ansible_user) }}"
+    dest: "{{ archive.base_destination_directory }}"
+  become: true
+
+- name: "{{ archive.filename }}: Ensure all subdirectories in destination can be listed"  # noqa: name[template] no-changed-when
+  ansible.builtin.shell: |
+    set -o pipefail
+    find {{ archive.base_destination_directory }} -type d -print0 | xargs -0 chmod ug+x
+  become: true
+  args:
+    executable: /bin/bash
+
+- name: "{{ archive.filename }}: Write sha256 file"  # noqa: name[template]
+  ansible.builtin.copy:
+    dest: "{{ proget_status_directory }}/{{ archive.filename }}.sha256"
+    content: "{{ remote_archive_head.json.sha256 }}"
+    mode: u=rw,g=r,o=r
+  when: extract_command_status is changed
+
+- name: "{{ archive.filename }}: Delete archive if sha256 is correct or extraction was successful"  # noqa: name[template]
+  ansible.builtin.file:
+    path: "{{ proget_downloads_directory }}/{{ archive.filename }}"
+    state: absent
+  when: >
+    (downloaded_sha256_file.stat.exists
+     and remote_archive_head.json.sha256 in downloaded_sha256_file_sha256.content | b64decode)
+    or extract_command_status is changed
