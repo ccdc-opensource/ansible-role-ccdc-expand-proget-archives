@@ -19,17 +19,17 @@
     mode: "0755"
   become: true
 
-- name: Create Required directories
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    owner: "{{ ansible_user }}"
-    recurse: true
-    mode: "0755"
-  become: true
-  loop:
-    - "{{ archive.base_destination_directory }}/{{ archive.move_and_delete_base_directory }}"
-    - "{{ proget_status_directory }}"
+# - name: Create Required directories
+#   ansible.builtin.file:
+#     path: "{{ item }}"
+#     state: directory
+#     owner: "{{ ansible_user }}"
+#     recurse: true
+#     mode: "0755"
+#   become: true
+#   loop:
+#     - "{{ archive.base_destination_directory }}/{{ archive.move_and_delete_base_directory }}"
+#     - "{{ proget_status_directory }}"
 
 - name: "{{ archive.filename }}: Check sha256 file is present"  # noqa: name[template]
   ansible.builtin.stat:
