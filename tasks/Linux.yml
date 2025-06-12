@@ -9,7 +9,7 @@
     - name: Extract pgutil
       ansible.builtin.unarchive:
         src: /tmp/pgutil-linux-x64.zip
-        dest: "{{ dest }}"
+        dest: "{{ pg_dest }}"
         remote_src: true
         mode: "0755"
       become: true
