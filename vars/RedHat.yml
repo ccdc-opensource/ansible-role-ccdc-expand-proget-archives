@@ -1,5 +1,5 @@
 platform_specific_default_base_proget_archive_directory: /opt/proget-archives
-pgutil: https://github.com/Inedo/pgutil/releases/download/v{{ pgutil-version }}/pgutil-linux-x64.zip
+pgutil: https://github.com/Inedo/pgutil/releases/download/v{{ pgutil_version }}/pgutil-linux-x64.zip
 required_packages:
   - p7zip
   - p7zip-plugins

@@ -1,6 +1,6 @@
 - name: Setup PGutil Linux
   block:
-    - name: Download PGutil {{ pgutil-version }}
+    - name: Download PGutil {{ pgutil_version }}
       ansible.builtin.get_url:
         url: "{{ pgutil }}"
         dest: /tmp/pgutil-linux-x64.zip
