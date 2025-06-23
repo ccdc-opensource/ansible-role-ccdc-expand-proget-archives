@@ -1,0 +1,24 @@
+- name: Setup PGutil MacOS
+  block:
+    - name: Download PGutil {{ pgutil_version }}
+      ansible.builtin.get_url:
+        url: "{{ pgutil }}"
+        dest: /tmp/pgutil-linux-x64.zip
+        mode: "0640"
+
+    - name: Extract pgutil
+      ansible.builtin.unarchive:
+        src: /tmp/pgutil-linux-x64.zip
+        dest: "{{ pg_dest }}"
+        remote_src: true
+        mode: "0755"
+      become: true
+
+- name: Add PGutil source
+  ansible.builtin.command: pgutil sources add --name={{ pgutil_source_name }} --url={{ proget_base_url }} --api-key={{ ansible_deployment_proget_key }}
+
+- name: Get and expand archives
+  ansible.builtin.include_tasks: expand_archive_posix.yml
+  loop: "{{ archive_definitions }}"
+  loop_control:
+    loop_var: archive
