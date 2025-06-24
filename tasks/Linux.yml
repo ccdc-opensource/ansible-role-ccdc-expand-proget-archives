@@ -1,3 +1,9 @@
+---
+- name: Install unzip
+  ansible.builtin.package:
+    name: unzip
+    state: present
+
 - name: Setup PGutil Linux
   block:
     - name: Download PGutil {{ pgutil_version }}
