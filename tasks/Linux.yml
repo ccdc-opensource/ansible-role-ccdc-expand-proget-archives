@@ -1,8 +1,9 @@
 ---
-- name: Install unzip
+- name: Add required packages
   ansible.builtin.package:
-    name: unzip
+    name: "{{ required_packages }}"
     state: present
+  become: true
 
 - name: Setup PGutil Linux
   block:

@@ -1,3 +1,13 @@
+---
+- name: Insall Homebrew + required packages
+  ansible.builtin.include_role:
+    name: geerlingguy.mac.homebrew
+  vars:
+    # This is overwritten by our group_vars (cpp.build-machines)
+    homebrew_installed_packages:
+      - "{{ required_packages }}"
+  when: not cpp_buildmachine
+
 - name: Setup PGutil MacOS
   block:
     - name: Download PGutil {{ pgutil_version }}

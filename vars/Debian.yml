@@ -9,3 +9,4 @@ required_packages:
   - gzip
   - xz-utils
   - curl
+  - unzip
