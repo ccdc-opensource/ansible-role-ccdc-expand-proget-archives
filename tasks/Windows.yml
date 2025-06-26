@@ -1,18 +1,13 @@
 ---
-- name: Ensure proget status archives directory is present
+- name: Create Required directories
   ansible.windows.win_file:
-    path: "{{ proget_status_directory }}"
+    path: "{{ item }}"
     state: directory
-
-- name: Ensure proget downloads archives directory is present
-  ansible.windows.win_file:
-    path: "{{ proget_downloads_directory }}"
-    state: directory
-
-- name: Ensure proget tempdownloads archives directory is present
-  ansible.windows.win_file:
-    path: "{{ proget_tempdownloads_directory }}"
-    state: directory
+  loop:
+    # - "{{ archive.base_destination_directory }}/{{ archive.move_and_delete_base_directory }}"
+    - "{{ proget_status_directory }}"
+    - "(( proget_downloads_directory ))"
+    - "{{ archive.base_destination_directory }}"
 
 - name: Install required tools
   chocolatey.chocolatey.win_chocolatey:

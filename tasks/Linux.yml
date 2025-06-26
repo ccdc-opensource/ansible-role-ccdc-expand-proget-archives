@@ -5,6 +5,22 @@
     state: present
   become: true
 
+- name: "{{ proget_downloads_directory }}: Ensure download directory is present"
+  ansible.builtin.file:
+    path: "{{ proget_downloads_directory }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "0755"
+  become: true
+
+- name: Ensure proget status archives directory is present
+  ansible.builtin.file:
+    path: "{{ proget_status_directory }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "0755"
+  become: true
+
 - name: Setup PGutil Linux
   block:
     - name: Download PGutil {{ pgutil_version }}
