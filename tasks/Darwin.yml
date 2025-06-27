@@ -42,6 +42,8 @@
 
 - name: Add PGutil source
   ansible.builtin.command: pgutil sources add --name={{ pgutil_source_name }} --url={{ proget_base_url }} --api-key={{ ansible_deployment_proget_key }}
+  environment:
+    PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
 
 - name: Get and expand archives
   ansible.builtin.include_tasks: expand_archive_posix.yml
