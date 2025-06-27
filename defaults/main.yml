@@ -5,9 +5,10 @@ proget_api_url: "{{ proget_base_url }}/{{ proget_endpoint }}"
 proget_endpoint: endpoints
 # PGutil info
 pgutil_source_name: Default
-pgutil_version: "2.1.10.2"
+pgutil_version: "2.1.11.6 "
 # Role requirements
 base_proget_archive_directory: "{{ platform_specific_default_base_proget_archive_directory }}"
 proget_status_directory: "{{ base_proget_archive_directory }}/status/"
 proget_downloads_directory: "{{ base_proget_archive_directory }}/downloads"
 proget_tempdownloads_directory: "{{ base_proget_archive_directory }}/tmpdownloads/"
+download_only: false
