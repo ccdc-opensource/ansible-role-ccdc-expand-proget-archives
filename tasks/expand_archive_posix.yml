@@ -93,11 +93,13 @@
       -o"{{ archive.base_destination_directory }}"
   environment:
     PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
-  when: >
-    (not is_tar)
-    and (not downloaded_sha256_file.stat.exists and not download_only
-         or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode
-         or not destination_directory.stat.exists or destination_directory_files.matched == 0)
+  when: 
+    - not is_tar
+    - not downloaded_sha256_file.stat.exists 
+    - not download_only or 
+          remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode or 
+          not destination_directory.stat.exists or 
+          destination_directory_files.matched == 0
   retries: 3
   delay: 5
   register: extract_command_status
