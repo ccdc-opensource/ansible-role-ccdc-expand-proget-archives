@@ -29,12 +29,12 @@
     - name: Download PGutil {{ pgutil_version }}
       ansible.builtin.get_url:
         url: "{{ pgutil }}"
-        dest: /tmp/pgutil-linux-x64.zip
+        dest: /tmp/pgutil-osx-arm64.zip
         mode: "0640"
 
     - name: Extract pgutil
       ansible.builtin.unarchive:
-        src: /tmp/pgutil-linux-x64.zip
+        src: /tmp/pgutil-osx-arm64.zip
         dest: "{{ pg_dest }}"
         remote_src: true
         mode: "0755"
