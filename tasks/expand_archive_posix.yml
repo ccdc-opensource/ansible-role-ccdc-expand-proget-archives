@@ -95,8 +95,8 @@
     PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
   when:
     - not is_tar
-    - not downloaded_sha256_file.stat.exists
-    - (not download_only or
+    - not download_onl
+    - (not downloaded_sha256_file.stat.exists or
       remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode or
       not destination_directory.stat.exists or
       destination_directory_files.matched == 0)
