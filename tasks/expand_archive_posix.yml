@@ -143,6 +143,7 @@
     dest: "{{ archive.base_destination_directory }}"
     recurse: true
   become: true
+  when: not download_only
 
 - name: "{{ archive.filename }}: Ensure correct owner on destination directory" # noqa: name[template]
   ansible.builtin.file:
