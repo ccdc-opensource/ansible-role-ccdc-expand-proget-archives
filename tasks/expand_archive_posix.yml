@@ -95,7 +95,7 @@
     PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
   when:
     - not is_tar
-    - not download_onl
+    - not download_only
     - (not downloaded_sha256_file.stat.exists or
       remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode or
       not destination_directory.stat.exists or
@@ -114,9 +114,11 @@
     PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
   when: >
     is_tar
-    and (not downloaded_sha256_file.stat.exists and not ownload_only
-         or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode
-         or not destination_directory.stat.exists or destination_directory_files.matched == 0)
+    - not download_only
+    - (not downloaded_sha256_file.stat.exists or
+      remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode or
+      not destination_directory.stat.exists or
+      destination_directory_files.matched == 0)
   register: extract_command_status_tar
 
 - name: "{{ archive.filename }}: Move out of base directory source" # noqa: name[template]
