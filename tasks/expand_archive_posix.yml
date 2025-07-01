@@ -126,7 +126,9 @@
     dest: "{{ archive.base_destination_directory }}/"
     remote_src: true
     mode: preserve
-  when: archive.move_and_delete_base_directory is defined
+  when: 
+    - archive.move_and_delete_base_directory is defined
+    - extract_command_status is changed or extract_command_status_tar is changed
 
 - name: "{{ archive.filename }}: Remove base directory" # noqa: name[template]
   ansible.builtin.file:
