@@ -11,37 +11,37 @@
   ansible.builtin.set_fact:
     filepath: "{{ regex_path[1] }}/{{ archive.filename }}"
 
-- name: "{{ archive.filename }}: Check if destination directory is present" # noqa: name[template]
+- name: "{{ archive.filename }}: Check if destination directory is present"  # noqa: name[template]
   ansible.windows.win_stat:
     path: "{{ archive.base_destination_directory }}"
   register: destination_directory
 
-- name: "{{ archive.filename }}: Check if destination directory has files" # noqa: name[template]
+- name: "{{ archive.filename }}: Check if destination directory has files"  # noqa: name[template]
   ansible.windows.win_find:
     paths: "{{ archive.base_destination_directory }}"
     file_type: file
   register: destination_directory_files
   when: destination_directory.stat.exists
 
-- name: "{{ archive.filename }}: Check if destination directory has subdirectories" # noqa: name[template]
+- name: "{{ archive.filename }}: Check if destination directory has subdirectories"  # noqa: name[template]
   ansible.windows.win_find:
     paths: "{{ archive.base_destination_directory }}"
     file_type: directory
   register: destination_directory_subdirs
   when: destination_directory.stat.exists
 
-- name: "{{ archive.filename }}: Check sha256 file is present" # noqa: name[template]
+- name: "{{ archive.filename }}: Check sha256 file is present"  # noqa: name[template]
   ansible.windows.win_stat:
     path: "{{ proget_status_directory }}/{{ archive.filename }}.sha256"
   register: downloaded_sha256_file
 
-- name: "{{ archive.filename }}: Read sha256 from downloaded_sha256_file file if present" # noqa: name[template]
+- name: "{{ archive.filename }}: Read sha256 from downloaded_sha256_file file if present"  # noqa: name[template]
   ansible.builtin.slurp:
     src: "{{ proget_status_directory }}/{{ archive.filename }}.sha256"
   register: downloaded_sha256_file_sha256
   when: downloaded_sha256_file.stat.exists
 
-- name: "{{ archive.filename }}: Perform a HEAD on the remote file to read sha256" # noqa: name[template]
+- name: "{{ archive.filename }}: Perform a HEAD on the remote file to read sha256"  # noqa: name[template]
   ansible.windows.win_uri:
     url: "{{ proget_api_url }}/{{ repo }}/metadata/{{ filepath }}"
     method: GET
@@ -51,18 +51,18 @@
       X-ApiKey: "{{ ansible_deployment_proget_key }}"
   register: remote_archive_head
 
-- name: "{{ archive.filename }}: Check downloaded file is present" # noqa: name[template]
+- name: "{{ archive.filename }}: Check downloaded file is present"  # noqa: name[template]
   ansible.windows.win_stat:
     path: "{{ proget_status_directory }}/{{ archive.filename }}"
   register: downloaded_file
 
-- name: "{{ archive.filename }}: Delete the downloaded archive if the size is different" # noqa: name[template]
+- name: "{{ archive.filename }}: Delete the downloaded archive if the size is different"  # noqa: name[template]
   ansible.windows.win_file:
     path: "{{ proget_downloads_directory }}/{{ archive.filename }}"
     state: absent
   when: downloaded_file.stat.exists and remote_archive_head.json.size != downloaded_file.stat.size
 
-- name: "{{ archive.filename }}: Download file if sha256 changed or destination directory is new" # noqa: name[template]
+- name: "{{ archive.filename }}: Download file if sha256 changed or destination directory is new"  # noqa: name[template]
   ansible.windows.win_shell: pgutil assets download --feed={{ repo }} --path={{ archive.file_path }} --output={{ proget_downloads_directory }}/{{ archive.filename }}
   environment:
   when: >
@@ -72,13 +72,13 @@
     or destination_directory_files.matched == 0
   register: download
 
-- name: "{{ archive.filename }} Determine archive type (part 1)"  # noqa: name[template]
+- name: "{{ archive.filename }} Determine archive type (part 1)"   # noqa: name[template]
   ansible.builtin.set_fact:
     is_zstd: "{{ archive.filename.endswith('.tar.zst') }}"
     is_bz2: "{{ archive.filename.endswith('.tar.bz2') }}"
     is_tar: "{{ archive.filename.endswith('.tar.gz') or archive.filename.endswith('.tar.xz') }}"
 
-- name: "{{ archive.filename }} Determine archive type (part 2)"  # noqa: name[template]
+- name: "{{ archive.filename }} Determine archive type (part 2)"   # noqa: name[template]
   ansible.builtin.set_fact:
     is_7z: "{{ not is_zstd and not is_tar and not is_bz2 }}"
 
@@ -95,12 +95,12 @@
     or not destination_directory.stat.exists
     or (destination_directory_files.matched == 0 and destination_directory_subdirs.matched == 0))
 
-- name: "{{ archive.filename }}: Extract tar.zst archive if sha256 changed"  # noqa: name[template]
+- name: "{{ archive.filename }}: Extract tar.zst archive if sha256 changed"   # noqa: name[template]
   ansible.windows.win_shell: >
     zstd -d "{{ proget_downloads_directory }}/{{ archive.filename }}" -c |
     tar -x -f - -C "{{ archive.base_destination_directory }}"
   args:
-    executable: cmd # Powershell truncates zstd output
+    executable: cmd  # Powershell truncates zstd output
   when: >
     is_zstd
     and (not downloaded_sha256_file.stat.exists
@@ -109,17 +109,17 @@
          or (destination_directory_files.matched == 0 and destination_directory_subdirs.matched == 0))
   register: extract_tar_command_status
 
-- name: "{{ archive.filename }}: Save tar.zstd extraction command status"  # noqa: name[template]
+- name: "{{ archive.filename }}: Save tar.zstd extraction command status"   # noqa: name[template]
   ansible.builtin.set_fact:
     extract_command_status: "{{ extract_tar_command_status }}"
   when: is_zstd
 
-- name: "{{ archive.filename }}: Extract tar.bz2 archive if sha256 changed"  # noqa: name[template]
+- name: "{{ archive.filename }}: Extract tar.bz2 archive if sha256 changed"   # noqa: name[template]
   ansible.windows.win_shell: >
     bzip2 -d "{{ proget_downloads_directory }}/{{ archive.filename }}" -c |
     tar -x -f - -C "{{ archive.base_destination_directory }}"
   args:
-    executable: cmd # Powershell truncates zstd output
+    executable: cmd  # Powershell truncates zstd output
   when: >
     is_bz2
     and (not downloaded_sha256_file.stat.exists
@@ -128,12 +128,12 @@
          or (destination_directory_files.matched == 0 and destination_directory_subdirs.matched == 0))
   register: extract_tar_command_status
 
-- name: "{{ archive.filename }}: Save tar.bz2 extraction command status"  # noqa: name[template]
+- name: "{{ archive.filename }}: Save tar.bz2 extraction command status"   # noqa: name[template]
   ansible.builtin.set_fact:
     extract_command_status: "{{ extract_tar_command_status }}"
   when: is_bz2
 
-- name: "{{ archive.filename }}: Extract tar archive if sha256 changed"  # noqa: name[template]
+- name: "{{ archive.filename }}: Extract tar archive if sha256 changed"   # noqa: name[template]
   ansible.windows.win_shell: >
     tar -x
     -C "{{ archive.base_destination_directory }}"
@@ -144,7 +144,7 @@
          or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode)
   register: extract_tar_command_status
 
-- name: "{{ archive.filename }}: Save tar extraction command status"  # noqa: name[template]
+- name: "{{ archive.filename }}: Save tar extraction command status"   # noqa: name[template]
   ansible.builtin.set_fact:
     extract_command_status: "{{ extract_tar_command_status }}"
   when: is_tar
@@ -159,7 +159,7 @@
     archive.move_and_delete_base_directory is defined
     and extract_command_status is changed
 
-- name: "{{ archive.filename }}: Remove base directory" # noqa: name[template]
+- name: "{{ archive.filename }}: Remove base directory"  # noqa: name[template]
   ansible.windows.win_file:
     path: "{{ archive.base_destination_directory }}/{{ archive.move_and_delete_base_directory }}"
     state: absent
@@ -167,13 +167,13 @@
     archive.move_and_delete_base_directory is defined
     and extract_command_status is changed
 
-- name: "{{ archive.filename }}: Write sha256 file" # noqa: name[template]
+- name: "{{ archive.filename }}: Write sha256 file"  # noqa: name[template]
   ansible.windows.win_copy:
     dest: "{{ proget_status_directory }}/{{ archive.filename }}.sha256"
     content: "{{ remote_archive_head.json.sha256 }}"
   when: extract_command_status is changed
 
-- name: "{{ archive.filename }}: Delete the archive if sha256 is correct or extraction was successful" # noqa: name[template]
+- name: "{{ archive.filename }}: Delete the archive if sha256 is correct or extraction was successful"  # noqa: name[template]
   ansible.windows.win_file:
     path: "{{ proget_downloads_directory }}/{{ archive.filename }}"
     state: absent
