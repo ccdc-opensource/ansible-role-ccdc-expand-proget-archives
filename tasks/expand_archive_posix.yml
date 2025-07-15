@@ -139,7 +139,7 @@
     - extract_command_status is changed or extract_command_status_tar is changed
 
 - name: "{{ archive.filename }}: Set owner for extracted files"  # noqa: name[template]
-  when: no tdownload_only and not is_tar or archive.contents_owner is defined
+  when: not download_only and not is_tar or archive.contents_owner is defined
   ansible.builtin.file:
     owner: "{{ archive.contents_owner | default(ansible_user) }}"
     dest: "{{ archive.base_destination_directory }}"
