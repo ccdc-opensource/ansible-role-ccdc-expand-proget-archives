@@ -63,7 +63,7 @@
   when: downloaded_file.stat.exists and remote_archive_head.json.size != downloaded_file.stat.size
 
 - name: "{{ archive.filename }}: Download file if sha256 changed or destination directory is new"  # noqa: name[template]
-  ansible.windows.win_shell: pgutil assets download --feed={{ repo }} --path={{ archive.file_path }} --output={{ proget_downloads_directory }}/{{ archive.filename }}
+  ansible.windows.win_shell: pgutil assets download --feed={{ repo }} --path={{ filepath }} --output={{ proget_downloads_directory }}/{{ archive.filename }}
   environment:
   when: >
     not downloaded_sha256_file.stat.exists
