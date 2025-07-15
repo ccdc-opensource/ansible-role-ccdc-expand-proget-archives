@@ -113,7 +113,7 @@
   environment:
     PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
   when: >
-    not download_only and is_tar 
+    not download_only and is_tar
     and (not downloaded_sha256_file.stat.exists or
     remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode or
     not destination_directory.stat.exists or
@@ -126,7 +126,7 @@
     dest: "{{ archive.base_destination_directory }}/"
     remote_src: true
     mode: preserve
-  when: 
+  when:
     - archive.move_and_delete_base_directory is defined
     - extract_command_status is changed or extract_command_status_tar is changed
 
@@ -139,13 +139,12 @@
     - extract_command_status is changed or extract_command_status_tar is changed
 
 - name: "{{ archive.filename }}: Set owner for extracted files"  # noqa: name[template]
-  when: not is_tar or archive.contents_owner is defined
+  when: no tdownload_only and not is_tar or archive.contents_owner is defined
   ansible.builtin.file:
     owner: "{{ archive.contents_owner | default(ansible_user) }}"
     dest: "{{ archive.base_destination_directory }}"
     recurse: true
   become: true
-  when: not download_only
 
 - name: "{{ archive.filename }}: Ensure correct owner on destination directory"  # noqa: name[template]
   ansible.builtin.file:
