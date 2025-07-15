@@ -43,7 +43,7 @@
 
 - name: "{{ archive.filename }}: Perform a HEAD on the remote file to read sha256" # noqa: name[template]
   ansible.windows.win_uri:
-    url: "{{ proget_api_url }}/{{ repo }}/metadata/{{ archive.file_path }}"
+    url: "{{ proget_api_url }}/{{ repo }}/metadata/{{ filepath }}"
     method: GET
     timeout: 60
     return_content: true
