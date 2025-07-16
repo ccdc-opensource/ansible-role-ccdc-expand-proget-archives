@@ -82,11 +82,11 @@
   ansible.builtin.set_fact:
     is_7z: "{{ not is_zstd and not is_tar and not is_bz2 }}"
 
-- name: "{{ archive.filename }}: Extract archive if sha256 changed"
-  community.windows.win_unzip:
-    src: "{{ proget_downloads_directory }}/{{ archive.filename }}"
-    dest: "{{ archive.base_destination_directory }}"
-    creates: "{{ archive.base_destination_directory }}"
+- name: "{{ archive.filename }}: Extract archive if sha256 changed"  # noqa: name[template]
+  ansible.windows.win_shell: >
+    7z x -aoa -mmt=on
+    "{{ proget_downloads_directory }}/{{ archive.filename }}"
+    -o"{{ archive.base_destination_directory }}"
   register: extract_command_status
   when: >
     is_7z
