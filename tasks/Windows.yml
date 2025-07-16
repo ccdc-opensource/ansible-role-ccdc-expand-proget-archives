@@ -6,7 +6,7 @@
   loop:
     # - "{{ archive.base_destination_directory }}/{{ archive.move_and_delete_base_directory }}"
     - "{{ proget_status_directory }}"
-    - "(( proget_downloads_directory ))"
+    - "{{ proget_downloads_directory }}"
 
 - name: Install required tools
   chocolatey.chocolatey.win_chocolatey:
