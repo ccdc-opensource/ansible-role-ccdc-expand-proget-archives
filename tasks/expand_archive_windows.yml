@@ -23,6 +23,11 @@
   register: destination_directory_files
   when: destination_directory.stat.exists
 
+- name: "{{ archive.filename }}: Ensure destination directory is present"  # noqa: name[template]
+  ansible.windows.win_file:
+    path: "{{ archive.base_destination_directory }}"
+    state: directory
+
 - name: "{{ archive.filename }}: Check if destination directory has subdirectories"  # noqa: name[template]
   ansible.windows.win_find:
     paths: "{{ archive.base_destination_directory }}"
