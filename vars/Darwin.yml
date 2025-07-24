@@ -1,0 +1,8 @@
+platform_specific_default_base_proget_archive_directory: /opt/proget-archives
+pgutil: https://github.com/Inedo/pgutil/releases/download/v{{ pgutil_version }}/pgutil-osx-arm64.zip
+pg_dest: /usr/local/bin
+required_packages:
+  - p7zip
+  - zstd
+  - curl
+  - sevenzip

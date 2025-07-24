@@ -1,0 +1,48 @@
+---
+- name: Add required packages
+  ansible.builtin.package:
+    name: "{{ required_packages }}"
+    state: present
+  become: true
+
+- name: "{{ proget_downloads_directory }}: Ensure download directory is present"
+  ansible.builtin.file:
+    path: "{{ proget_downloads_directory }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "0755"
+  become: true
+
+- name: Ensure proget status archives directory is present
+  ansible.builtin.file:
+    path: "{{ proget_status_directory }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "0755"
+  become: true
+
+- name: Setup PGutil Linux
+  block:
+    - name: Download PGutil {{ pgutil_version }}
+      ansible.builtin.get_url:
+        url: "{{ pgutil }}"
+        dest: /tmp/pgutil-linux-x64.zip
+        mode: "0640"
+
+    - name: Extract pgutil
+      ansible.builtin.unarchive:
+        src: /tmp/pgutil-linux-x64.zip
+        dest: "{{ pg_dest }}"
+        remote_src: true
+        mode: "0755"
+      become: true
+  when: ansible_system == "Linux"
+
+- name: Add PGutil source
+  ansible.builtin.command: pgutil sources add --name={{ pgutil_source_name }} --url={{ proget_base_url }} --api-key={{ ansible_deployment_proget_key }}
+
+- name: Get and expand archives
+  ansible.builtin.include_tasks: expand_archive_posix.yml
+  loop: "{{ archive_definitions }}"
+  loop_control:
+    loop_var: archive
