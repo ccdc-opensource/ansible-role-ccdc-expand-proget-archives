@@ -27,9 +27,9 @@ Here's an example of how to use this role in a playbook:
 ```yaml
 - hosts: all
   roles:
-    - name: ccdc.expand_artifactory_archives
+    - name: ccdc.expand_proget_archives
       vars:
-        artifactory-archives:
+        archive_definitions:
           - artefact_path: "my-repo/path/to/folder"
             filename: "my-archive.zip"
             base_destination_directory: "/opt/mydata"
