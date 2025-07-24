@@ -6,4 +6,3 @@ required_packages:
   - zstd
   - curl
   - sevenzip
-

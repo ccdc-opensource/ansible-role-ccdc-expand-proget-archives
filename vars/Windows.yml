@@ -6,4 +6,3 @@ required_packages:
   - bzip2
   - curl
   - pgutil
-
