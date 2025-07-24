@@ -35,4 +35,5 @@ Here's an example of how to use this role in a playbook:
             base_destination_directory: "/opt/mydata"
 ```
 ## License
+
 MIT / BSD
