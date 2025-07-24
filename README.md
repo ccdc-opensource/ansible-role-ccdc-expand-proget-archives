@@ -6,7 +6,7 @@ An Ansible role that downloads archives from ProGet repository and expands them 
 ## Requirements
 
 - `community.windows`
-- `chocolatey.chocolatey` 
+- `chocolatey.chocolatey`
 
 ## Role Variables
 
