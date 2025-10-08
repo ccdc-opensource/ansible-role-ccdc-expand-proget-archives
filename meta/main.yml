@@ -1,8 +1,11 @@
 galaxy_info:
   author: Jordan Layfield
+  role_name: expand_proget_archives
   description: Download and expand proget archives
+  namespace: ccdc
   company: The Cambridge Crystallographic Data Centre
   license: MIT
   min_ansible_version: 2.9
-  galaxy_tags: []
+  galaxy_tags:
+    - system
 dependencies: []
