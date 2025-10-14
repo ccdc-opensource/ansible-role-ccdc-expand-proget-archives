@@ -39,7 +39,6 @@
         dest: "{{ pg_dest }}"
         remote_src: true
         mode: "0755"
-        force: yes
       become: true
 
 - name: Add PGutil source
