@@ -41,8 +41,18 @@
         mode: "0755"
       become: true
 
+- name: Remove macOS quarantine attribute from pgutil
+  become: true
+  ansible.builtin.command: xattr -d com.apple.quarantine {{ pg_dest }}/pgutil
+  register: xattr_rm
+  failed_when: xattr_rm.rc not in [0,1]
+
 - name: Add PGutil source
-  ansible.builtin.command: pgutil sources add --name={{ pgutil_source_name }} --url={{ proget_base_url }} --api-key={{ ansible_deployment_proget_key }}
+  ansible.builtin.command: >
+    pgutil sources add
+    --name={{ pgutil_source_name }}
+    --url={{ proget_base_url }}
+    --api-key={{ ansible_deployment_proget_key }}
   environment:
     PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
 
