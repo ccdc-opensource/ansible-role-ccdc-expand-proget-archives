@@ -34,10 +34,17 @@
     name: ccdc-opensource/packages/pgutils
     state: present
 
-- name: Add PGutil source
-  ansible.builtin.command: pgutil sources add --name={{ pgutil_source_name }} --url={{ proget_base_url }} --api-key={{ ansible_deployment_proget_key }}
+- name: Find pgutil binary location
+  ansible.builtin.shell: which pgutil || find /usr/local /opt/homebrew /Applications -name pgutil -type f 2>/dev/null | head -1
+  register: pgutil_path
   environment:
-    PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+  changed_when: false
+
+- name: Add PGutil source
+  ansible.builtin.command: "{{ pgutil_path.stdout }} sources add --name={{ pgutil_source_name }} --url={{ proget_base_url }} --api-key={{ ansible_deployment_proget_key }}"
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
 
 - name: Get and expand archives
   ansible.builtin.include_tasks: expand_archive_posix.yml
