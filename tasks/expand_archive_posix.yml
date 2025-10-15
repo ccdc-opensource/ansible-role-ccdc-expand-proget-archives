@@ -1,7 +1,7 @@
 ---
 - name: Extract repo and path from path
   ansible.builtin.set_fact:
-    regex_path: "{{ archive.artefact_path | ansible.builtin.regex_search('^([^/]+)\/?(.*)$', '\\1', '\\2') }}"
+    regex_path: "{{ archive.artifactory_path | ansible.builtin.regex_search('^([^/]+)\/?(.*)$', '\\1', '\\2') }}"
 
 - name: Map Repo
   ansible.builtin.set_fact:
