@@ -24,35 +24,15 @@
     mode: "0755"
   become: true
 
-- name: Setup PGutil MacOS
-  block:
-    - name: Download PGutil {{ pgutil_version }}
-      ansible.builtin.get_url:
-        url: "{{ pgutil }}"
-        dest: "/tmp/pgutil-osx-arm64.zip"
-        mode: "0640"
-        force: yes
+- name: Add CCDC Homebrew tap
+  community.general.homebrew_tap:
+    name: ccdc-opensource/homebrew-packages
+    state: present
 
-    - name: Extract pgutil
-      ansible.builtin.unarchive:
-        src: "/tmp/pgutil-osx-arm64.zip"
-        dest: "{{ pg_dest }}"
-        remote_src: true
-        mode: "0755"
-      become: true
-
-- name: Ad-hoc sign pgutil so Gatekeeper allows it
-  become: true
-  ansible.builtin.command: /usr/bin/codesign --force --sign - {{ pg_dest }}/pgutil
-
-- name: Verify spctl sees a signature (non-fatal check)
-  ansible.builtin.command: /usr/sbin/spctl -a -vv {{ pg_dest }}/pgutil
-  register: spctl_check
-  changed_when: false
-  failed_when: false
-
-- debug:
-    var: spctl_check.stdout_lines
+- name: Install pgutils via Homebrew
+  community.general.homebrew_cask:
+    name: ccdc-opensource/packages/pgutils
+    state: present
 
 - name: Add PGutil source
   ansible.builtin.command: >
