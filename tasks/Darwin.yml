@@ -41,11 +41,18 @@
         mode: "0755"
       become: true
 
-- name: Remove macOS quarantine attribute from pgutil
+- name: Ad-hoc sign pgutil so Gatekeeper allows it
   become: true
-  ansible.builtin.command: xattr -d com.apple.quarantine {{ pg_dest }}/pgutil
-  register: xattr_rm
-  failed_when: xattr_rm.rc not in [0,1]
+  ansible.builtin.command: /usr/bin/codesign --force --sign - {{ pg_dest }}/pgutil
+
+- name: Verify spctl sees a signature (non-fatal check)
+  ansible.builtin.command: /usr/sbin/spctl -a -vv {{ pg_dest }}/pgutil
+  register: spctl_check
+  changed_when: false
+  failed_when: false
+
+- debug:
+    var: spctl_check.stdout_lines
 
 - name: Add PGutil source
   ansible.builtin.command: >
