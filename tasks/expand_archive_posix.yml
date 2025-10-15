@@ -9,7 +9,7 @@
 
 - name: Map filepath
   ansible.builtin.set_fact:
-    filepath: "{{ regex_path[1] }}/{{ archive.filename }}"
+    filepath: "{{ archive.filename if (regex_path[1] | length == 0) else (regex_path[1] + '/' + archive.filename) }}"
 
 - name: "{{ archive.filename }}: Check if destination directory is present"  # noqa: name[template]
   ansible.builtin.stat:
