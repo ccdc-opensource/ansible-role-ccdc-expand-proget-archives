@@ -53,7 +53,7 @@
 
 - name: "{{ archive.filename }}: GET on the remote file to read sha256"  # noqa: name[template]
   ansible.builtin.uri:
-    url: "{{ proget_api_url }}/{{ repo }}/metadata/{{ filepath }}"
+    url: "{{ proget_api_url }}/{{ repo }}/content/{{ filepath }}"
     method: GET
     timeout: 60
     headers:
