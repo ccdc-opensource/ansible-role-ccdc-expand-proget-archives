@@ -51,10 +51,10 @@
   register: downloaded_sha256_file_sha256
   when: downloaded_sha256_file.stat.exists
 
-- name: "{{ archive.filename }}: GET on the remote file to read sha256"  # noqa: name[template]
+- name: "{{ archive.filename }}: HEAD on the remote file to read metadata"  # noqa: name[template]
   ansible.builtin.uri:
-    url: "{{ proget_api_url }}/{{ repo }}/metadata/{{ filepath }}"
-    method: GET
+    url: "{{ proget_api_url }}/{{ repo }}/content/{{ filepath }}"
+    method: HEAD
     timeout: 60
     headers:
       X-ApiKey: "{{ ansible_deployment_proget_key }}"
