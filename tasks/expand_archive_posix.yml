@@ -59,6 +59,14 @@
     headers:
       X-ApiKey: "{{ ansible_deployment_proget_key }}"
   register: remote_archive_head
+  failed_when: false
+
+- name: Debug metadata response when it fails
+  debug:
+    msg: 
+      - "Metadata API call failed with status: {{ remote_archive_head.status | default('unknown') }}"
+      - "URL attempted: {{ proget_api_url }}/{{ repo }}/metadata/{{ filepath }}"
+  when: remote_archive_head.status != 200
 
 - name: "{{ archive.filename }}: Check downloaded file is present"  # noqa: name[template]
   ansible.builtin.stat:
