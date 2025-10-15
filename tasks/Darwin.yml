@@ -35,11 +35,7 @@
     state: present
 
 - name: Add PGutil source
-  ansible.builtin.command: >
-    pgutil sources add
-    --name={{ pgutil_source_name }}
-    --url={{ proget_base_url }}
-    --api-key={{ ansible_deployment_proget_key }}
+  ansible.builtin.command: pgutil sources add --name={{ pgutil_source_name }} --url={{ proget_base_url }} --api-key={{ ansible_deployment_proget_key }}
   environment:
     PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
 

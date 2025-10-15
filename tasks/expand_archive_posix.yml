@@ -1,7 +1,7 @@
 ---
 - name: Extract repo and path from path
   ansible.builtin.set_fact:
-    regex_path: "{{ archive.artifactory_path | ansible.builtin.regex_search('^([^/]+)\/?(.*)$', '\\1', '\\2') }}"
+    regex_path: "{{ archive.artefact_path | ansible.builtin.regex_search('^([^/]+)\/?(.*)$', '\\1', '\\2') }}"
 
 - name: Map Repo
   ansible.builtin.set_fact:
@@ -9,7 +9,7 @@
 
 - name: Map filepath
   ansible.builtin.set_fact:
-    filepath: "{{ archive.filename if (regex_path[1] | length == 0) else (regex_path[1] + '/' + archive.filename) }}"
+    filepath: "{{ regex_path[1] }}/{{ archive.filename }}"
 
 - name: "{{ archive.filename }}: Check if destination directory is present"  # noqa: name[template]
   ansible.builtin.stat:
@@ -23,7 +23,7 @@
   register: destination_directory_files
   when: destination_directory.stat.exists
 
-- name: "{{ archive.base_destination_directory }}: Ensure desination directory exists"
+- name: "{{ archive.base_destination_directory }}: Ensure destination directory exists"
   ansible.builtin.file:
     path: "{{ archive.base_destination_directory }}"
     state: directory
@@ -51,12 +51,34 @@
   register: downloaded_sha256_file_sha256
   when: downloaded_sha256_file.stat.exists
 
-- name: "{{ archive.filename }}: Download file if destination directory is new or empty"  # noqa: no-changed-when name[template]
-  ansible.builtin.command: pgutil assets download --feed={{ repo }} --path={{ filepath }} --output={{ proget_downloads_directory }}/{{ archive.filename }}
+- name: "{{ archive.filename }}: GET on the remote file to read sha256"  # noqa: name[template]
+  ansible.builtin.uri:
+    url: "{{ proget_api_url }}/{{ repo }}/metadata/{{ filepath }}"
+    method: GET
+    timeout: 60
+    headers:
+      X-ApiKey: "{{ ansible_deployment_proget_key }}"
+  register: remote_archive_head
+
+- name: "{{ archive.filename }}: Check downloaded file is present"  # noqa: name[template]
+  ansible.builtin.stat:
+    path: "{{ proget_status_directory }}/{{ archive.filename }}"
+  register: downloaded_file
+
+- name: "{{ archive.filename }}: Delete the downloaded archive if the size is different"  # noqa: name[template]
+  ansible.builtin.file:
+    path: "{{ proget_downloads_directory }}/{{ archive.filename }}"
+    state: absent
+  when: downloaded_file.stat.exists and remote_archive_head.json.size != downloaded_file.stat.size
+
+- name: "{{ archive.filename }}: Download file if sha256 changed or destination directory is new"  # noqa: no-changed-when name[template]
+  ansible.builtin.command: pgutil assets download --feed={{ repo }} --path={{ filepath  }} --output={{ proget_downloads_directory }}/{{ archive.filename }}
   environment:
     PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
   when: >
-    not destination_directory.stat.exists
+    not downloaded_sha256_file.stat.exists
+    or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode
+    or not destination_directory.stat.exists
     or destination_directory_files.matched == 0
   register: download
 
@@ -64,7 +86,7 @@
   ansible.builtin.set_fact:
     is_tar: "{{ archive.filename.endswith('.tar.gz') or archive.filename.endswith('.tar.xz') or archive.filename.endswith('.tar.zst') or archive.filename.endswith('.tar.bz2') }}"
 
-- name: "{{ archive.filename }}: Extract 7z / zip archive if destination directory is new or empty"  # noqa: no-changed-when name[template]
+- name: "{{ archive.filename }}: Extract 7z / zip archive if sha256 changed"  # noqa: no-changed-when name[template]
   ansible.builtin.command: >
     7z x -aoa
       "{{ proget_downloads_directory }}/{{ archive.filename }}"
@@ -74,13 +96,16 @@
   when:
     - not is_tar
     - not download_only
-    - (not destination_directory.stat.exists or destination_directory_files.matched == 0)
+    - (not downloaded_sha256_file.stat.exists or
+      remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode or
+      not destination_directory.stat.exists or
+      destination_directory_files.matched == 0)
   retries: 3
   delay: 5
   register: extract_command_status
   until: extract_command_status.rc == 0
 
-- name: "{{ archive.filename }}: Extract tar archive if destination directory is new or empty"  # noqa: no-changed-when name[template] command-instead-of-module
+- name: "{{ archive.filename }}: Extract tar archive if sha256 changed"  # noqa: no-changed-when name[template] command-instead-of-module
   ansible.builtin.unarchive:
     src: "{{ proget_downloads_directory }}/{{ archive.filename }}"
     dest: "{{ archive.base_destination_directory }}"
@@ -89,7 +114,10 @@
     PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
   when: >
     not download_only and is_tar
-    and (not destination_directory.stat.exists or destination_directory_files.matched == 0)
+    and (not downloaded_sha256_file.stat.exists or
+    remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode or
+    not destination_directory.stat.exists or
+    destination_directory_files.matched == 0)
   register: extract_command_status_tar
 
 - name: "{{ archive.filename }}: Move out of base directory source"  # noqa: name[template]

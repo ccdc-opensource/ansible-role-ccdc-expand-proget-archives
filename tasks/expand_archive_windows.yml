@@ -1,7 +1,7 @@
 ---
 - name: Extract repo and path from path
   ansible.builtin.set_fact:
-    regex_path: "{{ archive.artifactory_path | ansible.builtin.regex_search('^([^/]+)\/?(.*)$', '\\1', '\\2') }}"
+    regex_path: "{{ archive.artefact_path | ansible.builtin.regex_search('^([^/]+)\/?(.*)$', '\\1', '\\2') }}"
 
 - name: Map Repo
   ansible.builtin.set_fact:
@@ -9,7 +9,7 @@
 
 - name: Map filepath
   ansible.builtin.set_fact:
-    filepath: "{{ archive.filename if (regex_path[1] | length == 0) else (regex_path[1] + '/' + archive.filename) }}"
+    filepath: "{{ regex_path[1] }}/{{ archive.filename }}"
 
 - name: "{{ archive.filename }}: Check if destination directory is present"  # noqa: name[template]
   ansible.windows.win_stat:
@@ -40,10 +40,39 @@
     path: "{{ proget_status_directory }}/{{ archive.filename }}.sha256"
   register: downloaded_sha256_file
 
-- name: "{{ archive.filename }}: Download file if destination directory is new or empty"  # noqa: name[template]
-  ansible.windows.win_shell: pgutil assets download --feed={{ repo }} --path={{ filepath }} --output={{ proget_downloads_directory }}/{{ archive.filename }}
+- name: "{{ archive.filename }}: Read sha256 from downloaded_sha256_file file if present"  # noqa: name[template]
+  ansible.builtin.slurp:
+    src: "{{ proget_status_directory }}/{{ archive.filename }}.sha256"
+  register: downloaded_sha256_file_sha256
+  when: downloaded_sha256_file.stat.exists
+
+- name: "{{ archive.filename }}: Perform a HEAD on the remote file to read sha256"  # noqa: name[template]
+  ansible.windows.win_uri:
+    url: "{{ proget_api_url }}/{{ repo }}/metadata/{{ filepath | regex_replace('^/') }}"
+    method: GET
+    timeout: 60
+    return_content: true
+    headers:
+      X-ApiKey: "{{ ansible_deployment_proget_key }}"
+  register: remote_archive_head
+
+- name: "{{ archive.filename }}: Check downloaded file is present"  # noqa: name[template]
+  ansible.windows.win_stat:
+    path: "{{ proget_status_directory }}/{{ archive.filename }}"
+  register: downloaded_file
+
+- name: "{{ archive.filename }}: Delete the downloaded archive if the size is different"  # noqa: name[template]
+  ansible.windows.win_file:
+    path: "{{ proget_downloads_directory }}/{{ archive.filename }}"
+    state: absent
+  when: downloaded_file.stat.exists and remote_archive_head.json.size != downloaded_file.stat.size
+
+- name: "{{ archive.filename }}: Download file if sha256 changed or destination directory is new"  # noqa: name[template]
+  ansible.windows.win_shell: pgutil assets download --feed={{ repo }} --path={{ filepath | regex_replace('^/') }} --output={{ proget_downloads_directory }}/{{ archive.filename }}
   when: >
-    not destination_directory.stat.exists
+    not downloaded_sha256_file.stat.exists
+    or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode
+    or not destination_directory.stat.exists
     or destination_directory_files.matched == 0
   register: download
 
@@ -57,7 +86,7 @@
   ansible.builtin.set_fact:
     is_7z: "{{ not is_zstd and not is_tar and not is_bz2 }}"
 
-- name: "{{ archive.filename }}: Extract archive if destination directory is new or empty"  # noqa: name[template]
+- name: "{{ archive.filename }}: Extract archive if sha256 changed"  # noqa: name[template]
   ansible.windows.win_shell: >
     7z x -aoa -mmt=on
     "{{ proget_downloads_directory }}/{{ archive.filename }}"
@@ -65,10 +94,12 @@
   register: extract_command_status
   when: >
     is_7z
-    and (not destination_directory.stat.exists
+    and (not downloaded_sha256_file.stat.exists
+    or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode
+    or not destination_directory.stat.exists
     or (destination_directory_files.matched == 0 and destination_directory_subdirs.matched == 0))
 
-- name: "{{ archive.filename }}: Extract tar.zst archive if destination directory is new or empty"   # noqa: name[template]
+- name: "{{ archive.filename }}: Extract tar.zst archive if sha256 changed"   # noqa: name[template]
   ansible.windows.win_shell: >
     zstd -d "{{ proget_downloads_directory }}/{{ archive.filename }}" -c |
     tar -x -f - -C "{{ archive.base_destination_directory }}"
@@ -76,7 +107,9 @@
     executable: cmd  # Powershell truncates zstd output
   when: >
     is_zstd
-    and (not destination_directory.stat.exists
+    and (not downloaded_sha256_file.stat.exists
+         or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode
+         or not destination_directory.stat.exists
          or (destination_directory_files.matched == 0 and destination_directory_subdirs.matched == 0))
   register: extract_tar_command_status
 
@@ -85,7 +118,7 @@
     extract_command_status: "{{ extract_tar_command_status }}"
   when: is_zstd
 
-- name: "{{ archive.filename }}: Extract tar.bz2 archive if destination directory is new or empty"   # noqa: name[template]
+- name: "{{ archive.filename }}: Extract tar.bz2 archive if sha256 changed"   # noqa: name[template]
   ansible.windows.win_shell: >
     bzip2 -d "{{ proget_downloads_directory }}/{{ archive.filename }}" -c |
     tar -x -f - -C "{{ archive.base_destination_directory }}"
@@ -93,7 +126,9 @@
     executable: cmd  # Powershell truncates zstd output
   when: >
     is_bz2
-    and (not destination_directory.stat.exists
+    and (not downloaded_sha256_file.stat.exists
+         or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode
+         or not destination_directory.stat.exists
          or (destination_directory_files.matched == 0 and destination_directory_subdirs.matched == 0))
   register: extract_tar_command_status
 
@@ -102,15 +137,15 @@
     extract_command_status: "{{ extract_tar_command_status }}"
   when: is_bz2
 
-- name: "{{ archive.filename }}: Extract tar archive if destination directory is new or empty"   # noqa: name[template]
+- name: "{{ archive.filename }}: Extract tar archive if sha256 changed"   # noqa: name[template]
   ansible.windows.win_shell: >
     tar -x
     -C "{{ archive.base_destination_directory }}"
     -f "{{ proget_downloads_directory }}/{{ archive.filename }}"
   when: >
     is_tar
-    and (not destination_directory.stat.exists
-         or (destination_directory_files.matched == 0 and destination_directory_subdirs.matched == 0))
+    and (not downloaded_sha256_file.stat.exists
+         or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode)
   register: extract_tar_command_status
 
 - name: "{{ archive.filename }}: Save tar extraction command status"   # noqa: name[template]
