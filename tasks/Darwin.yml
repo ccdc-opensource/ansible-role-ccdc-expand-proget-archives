@@ -41,22 +41,37 @@
     PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
   changed_when: false
 
-- name: sign pgutil so Gatekeeper allows it
+- name: Remove quarantine attribute from pgutil
+  ansible.builtin.command: xattr -d com.apple.quarantine "{{ pgutil_path.stdout }}"
+  failed_when: false
+  when: pgutil_path.stdout | length > 0
+
+- name: Sign pgutil so Gatekeeper allows it
   become: true
   ansible.builtin.command: /usr/bin/codesign --force --sign - "{{ pgutil_path.stdout }}"
   when: pgutil_path.stdout | length > 0
 
-- name: Verify spctl sees a signature on pgutil
-  ansible.builtin.command: /usr/sbin/spctl -a -vv "{{ pgutil_path.stdout }}"
-  register: spctl_check
-  changed_when: false
+- name: Check if source already exists
+  ansible.builtin.command: "{{ pgutil_path.stdout }} sources list"
+  register: existing_sources
   failed_when: false
-  when: pgutil_path.stdout | length > 0
+  changed_when: false
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
 
-- name: Debug spctl output
+- name: Debug existing sources
   debug:
-    var: spctl_check.stdout_lines
-  when: spctl_check is defined
+    var: existing_sources
+  when: existing_sources is defined
+
+- name: Remove existing Default source if present
+  ansible.builtin.command: "{{ pgutil_path.stdout }} sources remove --name={{ pgutil_source_name }}"
+  failed_when: false
+  when:
+    - existing_sources.rc == 0
+    - pgutil_source_name in existing_sources.stdout
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
 
 - name: Add PGutil source
   ansible.builtin.command: "{{ pgutil_path.stdout }} sources add --name={{ pgutil_source_name }} --url={{ proget_base_url }} --api-key={{ ansible_deployment_proget_key }}"
