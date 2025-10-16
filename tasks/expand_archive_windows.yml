@@ -9,7 +9,7 @@
 
 - name: Map filepath
   ansible.builtin.set_fact:
-    filepath: "{{ regex_path[1] }}{{ archive.filename }}"
+    filepath: "{{ (regex_path[1] + '/' + archive.filename) | regex_replace('/+', '/') | regex_replace('^/', '') }}"
 
 - name: "{{ archive.filename }}: Check if destination directory is present"  # noqa: name[template]
   ansible.windows.win_stat:
@@ -76,13 +76,13 @@
     or destination_directory_files.matched == 0
   register: download
 
-- name: "{{ archive.filename }} Determine archive type (part 1)"   # noqa: name[template]
+- name: "{{ archive.filename }} Determine archive type (part 1)"  # noqa: name[template]
   ansible.builtin.set_fact:
     is_zstd: "{{ archive.filename.endswith('.tar.zst') }}"
     is_bz2: "{{ archive.filename.endswith('.tar.bz2') }}"
     is_tar: "{{ archive.filename.endswith('.tar.gz') or archive.filename.endswith('.tar.xz') }}"
 
-- name: "{{ archive.filename }} Determine archive type (part 2)"   # noqa: name[template]
+- name: "{{ archive.filename }} Determine archive type (part 2)"  # noqa: name[template]
   ansible.builtin.set_fact:
     is_7z: "{{ not is_zstd and not is_tar and not is_bz2 }}"
 
@@ -99,7 +99,7 @@
     or not destination_directory.stat.exists
     or (destination_directory_files.matched == 0 and destination_directory_subdirs.matched == 0))
 
-- name: "{{ archive.filename }}: Extract tar.zst archive if sha256 changed"   # noqa: name[template]
+- name: "{{ archive.filename }}: Extract tar.zst archive if sha256 changed"  # noqa: name[template]
   ansible.windows.win_shell: >
     zstd -d "{{ proget_downloads_directory }}/{{ archive.filename }}" -c |
     tar -x -f - -C "{{ archive.base_destination_directory }}"
@@ -113,12 +113,12 @@
          or (destination_directory_files.matched == 0 and destination_directory_subdirs.matched == 0))
   register: extract_tar_command_status
 
-- name: "{{ archive.filename }}: Save tar.zstd extraction command status"   # noqa: name[template]
+- name: "{{ archive.filename }}: Save tar.zstd extraction command status"  # noqa: name[template]
   ansible.builtin.set_fact:
     extract_command_status: "{{ extract_tar_command_status }}"
   when: is_zstd
 
-- name: "{{ archive.filename }}: Extract tar.bz2 archive if sha256 changed"   # noqa: name[template]
+- name: "{{ archive.filename }}: Extract tar.bz2 archive if sha256 changed"  # noqa: name[template]
   ansible.windows.win_shell: >
     bzip2 -d "{{ proget_downloads_directory }}/{{ archive.filename }}" -c |
     tar -x -f - -C "{{ archive.base_destination_directory }}"
@@ -132,12 +132,12 @@
          or (destination_directory_files.matched == 0 and destination_directory_subdirs.matched == 0))
   register: extract_tar_command_status
 
-- name: "{{ archive.filename }}: Save tar.bz2 extraction command status"   # noqa: name[template]
+- name: "{{ archive.filename }}: Save tar.bz2 extraction command status"  # noqa: name[template]
   ansible.builtin.set_fact:
     extract_command_status: "{{ extract_tar_command_status }}"
   when: is_bz2
 
-- name: "{{ archive.filename }}: Extract tar archive if sha256 changed"   # noqa: name[template]
+- name: "{{ archive.filename }}: Extract tar archive if sha256 changed"  # noqa: name[template]
   ansible.windows.win_shell: >
     tar -x
     -C "{{ archive.base_destination_directory }}"
@@ -148,7 +148,7 @@
          or remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode)
   register: extract_tar_command_status
 
-- name: "{{ archive.filename }}: Save tar extraction command status"   # noqa: name[template]
+- name: "{{ archive.filename }}: Save tar extraction command status"  # noqa: name[template]
   ansible.builtin.set_fact:
     extract_command_status: "{{ extract_tar_command_status }}"
   when: is_tar

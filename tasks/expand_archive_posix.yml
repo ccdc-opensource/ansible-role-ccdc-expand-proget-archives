@@ -9,7 +9,7 @@
 
 - name: Map filepath
   ansible.builtin.set_fact:
-    filepath: "{{ regex_path[1] }}{{ archive.filename }}"
+    filepath: "{{ (regex_path[1] + '/' + archive.filename) | regex_replace('/+', '/') | regex_replace('^/', '') }}"
 
 - name: "{{ archive.filename }}: Check if destination directory is present"  # noqa: name[template]
   ansible.builtin.stat:
@@ -72,7 +72,7 @@
   when: downloaded_file.stat.exists and remote_archive_head.json.size != downloaded_file.stat.size
 
 - name: "{{ archive.filename }}: Download file if sha256 changed or destination directory is new"  # noqa: no-changed-when name[template]
-  ansible.builtin.command: pgutil assets download --feed={{ repo }} --path={{ filepath  }} --output={{ proget_downloads_directory }}/{{ archive.filename }}
+  ansible.builtin.command: pgutil assets download --feed={{ repo }} --path={{ filepath }} --output={{ proget_downloads_directory }}/{{ archive.filename }}
   environment:
     PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
   when: >
