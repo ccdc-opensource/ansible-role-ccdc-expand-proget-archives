@@ -24,26 +24,59 @@
     mode: "0755"
   become: true
 
-- name: Setup PGutil MacOS
-  block:
-    - name: Download PGutil {{ pgutil_version }}
-      ansible.builtin.get_url:
-        url: "{{ pgutil }}"
-        dest: /tmp/pgutil-osx-arm64.zip
-        mode: "0640"
+- name: Add CCDC Homebrew tap
+  community.general.homebrew_tap:
+    name: ccdc-opensource/homebrew-packages
+    state: present
 
-    - name: Extract pgutil
-      ansible.builtin.unarchive:
-        src: /tmp/pgutil-osx-arm64.zip
-        dest: "{{ pg_dest }}"
-        remote_src: true
-        mode: "0755"
-      become: true
+- name: Install pgutils via Homebrew
+  community.general.homebrew_cask:
+    name: ccdc-opensource/packages/pgutils
+    state: present
+
+- name: Find pgutil binary location
+  ansible.builtin.shell: which pgutil || find /usr/local /opt/homebrew /Applications -name pgutil -type f 2>/dev/null | head -1
+  register: pgutil_path
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+  changed_when: false
+
+- name: Remove quarantine attribute from pgutil
+  ansible.builtin.command: xattr -d com.apple.quarantine "{{ pgutil_path.stdout }}"
+  failed_when: false
+  when: pgutil_path.stdout | length > 0
+
+- name: Sign pgutil so Gatekeeper allows it
+  become: true
+  ansible.builtin.command: /usr/bin/codesign --force --sign - "{{ pgutil_path.stdout }}"
+  when: pgutil_path.stdout | length > 0
+
+- name: Check if source already exists
+  ansible.builtin.command: "{{ pgutil_path.stdout }} sources list"
+  register: existing_sources
+  failed_when: false
+  changed_when: false
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+
+- name: Debug existing sources
+  debug:
+    var: existing_sources
+  when: existing_sources is defined
+
+- name: Remove existing Default source if present
+  ansible.builtin.command: "{{ pgutil_path.stdout }} sources remove --name={{ pgutil_source_name }}"
+  failed_when: false
+  when:
+    - existing_sources.rc == 0
+    - pgutil_source_name in existing_sources.stdout
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
 
 - name: Add PGutil source
-  ansible.builtin.command: pgutil sources add --name={{ pgutil_source_name }} --url={{ proget_base_url }} --api-key={{ ansible_deployment_proget_key }}
+  ansible.builtin.command: "{{ pgutil_path.stdout }} sources add --name={{ pgutil_source_name }} --url={{ proget_base_url }} --api-key={{ ansible_deployment_proget_key }}"
   environment:
-    PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
 
 - name: Get and expand archives
   ansible.builtin.include_tasks: expand_archive_posix.yml
