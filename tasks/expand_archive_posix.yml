@@ -27,7 +27,7 @@
   ansible.builtin.file:
     path: "{{ archive.base_destination_directory }}"
     state: directory
-    owner: "{{ ansible_user }}"
+    owner: "{{ archive.contents_owner | default(ansible_user) }}"
     mode: "0755"
   become: true
   when: not destination_directory.stat.exists
@@ -36,7 +36,7 @@
   ansible.builtin.file:
     path: "{{ platform_specific_default_base_proget_archive_directory }}"
     state: directory
-    owner: "{{ ansible_user }}"
+    owner: "{{ archive.contents_owner | default(ansible_user) }}"
     mode: "0755"
   become: true
 
