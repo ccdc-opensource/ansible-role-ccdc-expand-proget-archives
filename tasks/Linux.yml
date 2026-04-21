@@ -9,7 +9,7 @@
   ansible.builtin.file:
     path: "{{ proget_downloads_directory }}"
     state: directory
-    owner: "{{ ansible_user }}"
+    owner: "{{ ansible_user }}" # Ansible user is used here because the unarchive task needs to read from this directory and it runs as this user, so it needs to have permissions to read from it
     mode: "0755"
   become: true
 
@@ -17,7 +17,7 @@
   ansible.builtin.file:
     path: "{{ proget_status_directory }}"
     state: directory
-    owner: "{{ ansible_user }}"
+    owner: "{{ ansible_user }}" # Ansible user is used here because the unarchive task needs to read from this directory and it runs as this user, so it needs to have permissions to read from it
     mode: "0755"
   become: true
 
