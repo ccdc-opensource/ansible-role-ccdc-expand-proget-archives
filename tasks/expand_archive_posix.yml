@@ -27,7 +27,7 @@
   ansible.builtin.file:
     path: "{{ archive.base_destination_directory }}"
     state: directory
-    owner: "{{ contents_owner }}"
+    owner: "{{ ansible_user }}" # Ansible user is used here because the unarchive task needs to read from this directory and it runs as this user, so it needs to have permissions to read from it
     mode: "0755"
   become: true
   when: not destination_directory.stat.exists
@@ -36,7 +36,7 @@
   ansible.builtin.file:
     path: "{{ platform_specific_default_base_proget_archive_directory }}"
     state: directory
-    owner: "{{ contents_owner }}"
+    owner: "{{ ansible_user }}" # Ansible user is used here because the unarchive task needs to read from this directory and it runs as this user, so it needs to have permissions to read from it
     mode: "0755"
   become: true
 
