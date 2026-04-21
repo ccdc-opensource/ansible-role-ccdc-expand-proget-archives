@@ -9,7 +9,7 @@
   ansible.builtin.file:
     path: "{{ proget_downloads_directory }}"
     state: directory
-    owner: "{{ ansible_user }}"
+    owner: "{{ contents_owner | default(ansible_user) }}"
     mode: "0755"
   become: true
 
@@ -17,7 +17,7 @@
   ansible.builtin.file:
     path: "{{ proget_status_directory }}"
     state: directory
-    owner: "{{ ansible_user }}"
+    owner: "{{ contents_owner | default(ansible_user) }}"
     mode: "0755"
   become: true
 
