@@ -12,8 +12,7 @@ An Ansible role that downloads archives from ProGet repository and expands them 
 
 ```yaml
 download_only: false  # Whether to only download files without extracting them
-contents_owner: "{{ ansible_user }} # Set owner on files
-```
+contents_group: "{{ ansible_user }} # Set group ownership on files
 
 You can override these variables in your playbook when including this role.
 

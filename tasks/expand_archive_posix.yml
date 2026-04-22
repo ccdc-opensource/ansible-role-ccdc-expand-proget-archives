@@ -104,7 +104,6 @@
   delay: 5
   register: extract_command_status
   until: extract_command_status.rc == 0
-  become: true
 
 - name: "{{ archive.filename }}: Extract tar archive if sha256 changed"  # noqa: no-changed-when name[template] command-instead-of-module
   ansible.builtin.unarchive:
@@ -120,7 +119,6 @@
     not destination_directory.stat.exists or
     destination_directory_files.matched == 0)
   register: extract_command_status_tar
-  become: true
 
 - name: "{{ archive.filename }}: Move out of base directory source"  # noqa: name[template]
   ansible.builtin.copy:
@@ -140,13 +138,14 @@
     - archive.move_and_delete_base_directory is defined
     - extract_command_status is changed or extract_command_status_tar is changed
 
-- name: "{{ archive.filename }}: Set owner for extracted files"  # noqa: name[template]
+- name: "{{ archive.filename }}: Set owner and group for extracted files"  # noqa: name[template]
   when:
     - not download_only
-    - contents_owner is defined
+    - contents_group is defined
     - extract_command_status is changed or extract_command_status_tar is changed
   ansible.builtin.file:
-    owner: "{{ contents_owner }}"
+    owner: "{{ ansible_user }}"
+    group: "{{ contents_group | default(ansible_user) }}"
     dest: "{{ archive.base_destination_directory }}"
     recurse: true
   become: true
