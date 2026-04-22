@@ -141,7 +141,10 @@
     - extract_command_status is changed or extract_command_status_tar is changed
 
 - name: "{{ archive.filename }}: Set owner for extracted files"  # noqa: name[template]
-  when: not download_only and not is_tar or contents_owner is defined
+  when:
+    - not download_only
+    - contents_owner is defined
+    - extract_command_status is changed or extract_command_status_tar is changed
   ansible.builtin.file:
     owner: "{{ contents_owner }}"
     dest: "{{ archive.base_destination_directory }}"
@@ -150,7 +153,8 @@
 
 - name: "{{ archive.filename }}: Ensure correct owner on destination directory"  # noqa: name[template]
   ansible.builtin.file:
-    owner: "{{ contents_owner }}"
+    owner: "{{ ansible_user }}" # Ansible user is used here because the unarchive task needs to read from this directory and it runs as this user, so it needs to have permissions to read from it
+    mode: "0755"
     dest: "{{ archive.base_destination_directory }}"
   become: true
 
