@@ -87,7 +87,7 @@
     is_tar: "{{ archive.filename.endswith('.tar.gz') or archive.filename.endswith('.tar.xz') or archive.filename.endswith('.tar.zst') or archive.filename.endswith('.tar.bz2') }}"
     is_tar_bz2: "{{ archive.filename.endswith('.tar.bz2') }}"
 
-- name: "{{ archive.filename }}: Initialize tar extraction command status"  # noqa: name[template]
+- name: "{{ archive.filename }}: initialise tar extraction command status"  # noqa: name[template]
   ansible.builtin.set_fact:
     extract_command_status_tar:
       changed: false
