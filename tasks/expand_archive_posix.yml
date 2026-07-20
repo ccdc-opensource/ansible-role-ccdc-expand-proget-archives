@@ -85,6 +85,12 @@
 - name: "{{ archive.filename }}: Determine archive type (part 1)"  # noqa: name[template]
   ansible.builtin.set_fact:
     is_tar: "{{ archive.filename.endswith('.tar.gz') or archive.filename.endswith('.tar.xz') or archive.filename.endswith('.tar.zst') or archive.filename.endswith('.tar.bz2') }}"
+    is_tar_bz2: "{{ archive.filename.endswith('.tar.bz2') }}"
+
+- name: "{{ archive.filename }}: initialise tar extraction command status"  # noqa: name[template]
+  ansible.builtin.set_fact:
+    extract_command_status_tar:
+      changed: false
 
 - name: "{{ archive.filename }}: Extract 7z / zip archive if sha256 changed"  # noqa: no-changed-when name[template]
   ansible.builtin.command: >
@@ -105,6 +111,26 @@
   register: extract_command_status
   until: extract_command_status.rc == 0
 
+- name: "{{ archive.filename }}: Extract tar.bz2 archive on Darwin if sha256 changed"  # noqa: no-changed-when name[template]
+  ansible.builtin.command: >
+    tar -xjf
+      "{{ proget_downloads_directory }}/{{ archive.filename }}"
+      -C "{{ archive.base_destination_directory }}"
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+  when: >
+    not download_only and ansible_system == "Darwin" and is_tar_bz2
+    and (not downloaded_sha256_file.stat.exists or
+    remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode or
+    not destination_directory.stat.exists or
+    destination_directory_files.matched == 0)
+  register: extract_tar_bz2_command_status
+
+- name: "{{ archive.filename }}: Save Darwin tar.bz2 extraction command status"  # noqa: name[template]
+  ansible.builtin.set_fact:
+    extract_command_status_tar: "{{ extract_tar_bz2_command_status }}"
+  when: ansible_system == "Darwin" and is_tar_bz2
+
 - name: "{{ archive.filename }}: Extract tar archive if sha256 changed"  # noqa: no-changed-when name[template] command-instead-of-module
   ansible.builtin.unarchive:
     src: "{{ proget_downloads_directory }}/{{ archive.filename }}"
@@ -114,11 +140,17 @@
     PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
   when: >
     not download_only and is_tar
+    and not (ansible_system == "Darwin" and is_tar_bz2)
     and (not downloaded_sha256_file.stat.exists or
     remote_archive_head.json.sha256 not in downloaded_sha256_file_sha256.content | b64decode or
     not destination_directory.stat.exists or
     destination_directory_files.matched == 0)
-  register: extract_command_status_tar
+  register: extract_tar_unarchive_command_status
+
+- name: "{{ archive.filename }}: Save tar extraction command status"  # noqa: name[template]
+  ansible.builtin.set_fact:
+    extract_command_status_tar: "{{ extract_tar_unarchive_command_status }}"
+  when: is_tar and not (ansible_system == "Darwin" and is_tar_bz2)
 
 - name: "{{ archive.filename }}: Move out of base directory source"  # noqa: name[template]
   ansible.builtin.copy:
