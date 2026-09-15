@@ -28,6 +28,7 @@
   community.general.homebrew_tap:
     name: ccdc-opensource/homebrew-packages
     state: present
+    trust: true
 
 - name: Install pgutils via Homebrew
   community.general.homebrew_cask:
